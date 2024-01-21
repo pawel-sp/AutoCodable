@@ -138,7 +138,7 @@ final class AutoDecodableMacroTests: XCTestCase {
             struct Foo {
                 let bar: Int
             }
-            @AutoDecodable(container: .singleValue)
+            @AutoDecodable(container: .singleValue("bar"))
             extension Foo: Decodable {
             }
             """,
@@ -151,7 +151,7 @@ final class AutoDecodableMacroTests: XCTestCase {
 
                 init(from decoder: Decoder) throws {
                     let container = try decoder.singleValueContainer()
-                    try self.init(value: container.decode())
+                    try self.init(bar: container.decode())
                 }
             }
             """,
@@ -165,7 +165,7 @@ final class AutoDecodableMacroTests: XCTestCase {
             public struct Foo {
                 let bar: Int
             }
-            @AutoDecodable(accessControl: .public, container: .singleValue)
+            @AutoDecodable(accessControl: .public, container: .singleValue("bar"))
             extension Foo: Decodable {
             }
             """,
@@ -178,7 +178,7 @@ final class AutoDecodableMacroTests: XCTestCase {
 
                 public init(from decoder: Decoder) throws {
                     let container = try decoder.singleValueContainer()
-                    try self.init(value: container.decode())
+                    try self.init(bar: container.decode())
                 }
             }
             """,

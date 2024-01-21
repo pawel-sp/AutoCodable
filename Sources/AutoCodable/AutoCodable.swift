@@ -5,7 +5,7 @@ public enum AccessControl {
 
 public enum Container {
     case keyed
-    case singleValue
+    case singleValue(String)
     case singleValueForEnum
 }
 

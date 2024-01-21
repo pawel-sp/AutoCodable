@@ -26,23 +26,23 @@ public struct AutoDecodableMacro: MemberMacro {
         guard declaration.is(ExtensionDeclSyntax.self) else {
             throw Error.onlyApplicableToExtension
         }
-        let labelValuePairs = node.keyValueArgs()
+        let arguments = node.args()
 
         let bodySyntax: CodeBlockSyntax
-        switch labelValuePairs["container"] {
-        case "keyed", .none:
+        switch arguments["container"] {
+        case .member("keyed"), .none:
             bodySyntax = try keyedContainerBodySyntax(declaration: declaration)
-        case "singleValue":
-            bodySyntax = try singleValueContainerBodySyntax()
-        case "singleValueForEnum":
+        case let .function("singleValue", args):
+            bodySyntax = try singleValueContainerBodySyntax(label: args[0])
+        case .member("singleValueForEnum"):
             bodySyntax = try singleValueContainerForEnumBodySyntax(declaration: declaration)
         case .some:
             bodySyntax = CodeBlockSyntax(statements: .init([]))
         }
 
         let modifiers: DeclModifierListSyntax
-        switch labelValuePairs["accessControl"] {
-        case "public":
+        switch arguments["accessControl"] {
+        case .member("public"):
             modifiers = [DeclModifierSyntax(name: TokenSyntax.keyword(.public))]
         default:
             modifiers = []
@@ -153,13 +153,13 @@ public struct AutoDecodableMacro: MemberMacro {
 
     // MARK: Single Value Container
 
-    private static func singleValueContainerBodySyntax() throws -> CodeBlockSyntax {
+    private static func singleValueContainerBodySyntax(label: String) throws -> CodeBlockSyntax {
         try CodeBlockSyntax(
             statementsBuilder: {
                 try VariableDeclSyntax("let container = try decoder.singleValueContainer()")
                 FunctionCallExprSyntax(callee: ExprSyntax("try self.init")) {
                     LabeledExprSyntax(
-                        label: "value",
+                        label: label,
                         expression: ExprSyntax("container.decode()")
                     )
                 }
