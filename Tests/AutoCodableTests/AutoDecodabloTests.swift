@@ -154,7 +154,7 @@ extension Address: Decodable {
     }
 }
 
-@AutoDecodable(container: .singleValue)
+@AutoDecodable(container: .singleValue("value"))
 extension Identifier: Decodable {}
 
 @AutoDecodable(container: .singleValueForEnum)
