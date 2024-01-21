@@ -4,11 +4,11 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 private let testMacros: [String: Macro.Type] = [
-    "AutoDecodable": AutoDecodableMacro.self,
-    "DecodedValue": DecodedValueMacro.self,
+    "AutoEncodable": AutoEncodableMacro.self,
+    "EncodedValue": EncodedValueMacro.self,
 ]
 
-final class AutoDecodableMacroTests: XCTestCase {
+final class AutoEncodableMacroTests: XCTestCase {
     // MARK: Keyed Container
 
     func testDefaultMacro() {
@@ -18,8 +18,8 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable
-            extension Foo: Decodable {
+            @AutoEncodable
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
@@ -32,18 +32,16 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: container.decode(for: .baz)
-                    )
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(bar, forKey: .bar)
+                    try container.encode(baz, forKey: .baz)
                 }
             }
             """,
@@ -58,8 +56,8 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable(accessControl: .internal)
-            extension Foo: Decodable {
+            @AutoEncodable(accessControl: .internal)
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
@@ -72,18 +70,16 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: container.decode(for: .baz)
-                    )
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(bar, forKey: .bar)
+                    try container.encode(baz, forKey: .baz)
                 }
             }
             """,
@@ -94,12 +90,12 @@ final class AutoDecodableMacroTests: XCTestCase {
     func testPublicAccessControlMacro() {
         assertMacroExpansion(
             """
-            public struct Foo {
+            struct Foo {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable(accessControl: .public)
-            extension Foo: Decodable {
+            @AutoEncodable(accessControl: .public)
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
@@ -108,22 +104,20 @@ final class AutoDecodableMacroTests: XCTestCase {
             """,
             expandedSource:
             """
-            public struct Foo {
+            struct Foo {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
                 }
 
-                public init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: container.decode(for: .baz)
-                    )
+                public func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(bar, forKey: .bar)
+                    try container.encode(baz, forKey: .baz)
                 }
             }
             """,
@@ -139,8 +133,8 @@ final class AutoDecodableMacroTests: XCTestCase {
             struct Foo {
                 let bar: Int
             }
-            @AutoDecodable(container: .singleValue("bar"))
-            extension Foo: Decodable {
+            @AutoEncodable(container: .singleValue("bar"))
+            extension Foo: Encodable {
             }
             """,
             expandedSource:
@@ -148,11 +142,11 @@ final class AutoDecodableMacroTests: XCTestCase {
             struct Foo {
                 let bar: Int
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    try self.init(bar: container.decode())
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.singleValueContainer()
+                    try container.encode(bar)
                 }
             }
             """,
@@ -163,23 +157,23 @@ final class AutoDecodableMacroTests: XCTestCase {
     func testSingleValueContainerWithPublicAccessControlMacro() {
         assertMacroExpansion(
             """
-            public struct Foo {
+            struct Foo {
                 let bar: Int
             }
-            @AutoDecodable(accessControl: .public, container: .singleValue("bar"))
-            extension Foo: Decodable {
+            @AutoEncodable(accessControl: .public, container: .singleValue("bar"))
+            extension Foo: Encodable {
             }
             """,
             expandedSource:
             """
-            public struct Foo {
+            struct Foo {
                 let bar: Int
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
 
-                public init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    try self.init(bar: container.decode())
+                public func encode(to encoder: Encoder) throws {
+                    var container = encoder.singleValueContainer()
+                    try container.encode(bar)
                 }
             }
             """,
@@ -196,8 +190,8 @@ final class AutoDecodableMacroTests: XCTestCase {
                 case bar
                 case baz
             }
-            @AutoDecodable(container: .singleValueForEnum)
-            extension Foo: Decodable {
+            @AutoEncodable(container: .singleValueForEnum)
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
@@ -210,25 +204,19 @@ final class AutoDecodableMacroTests: XCTestCase {
                 case bar
                 case baz
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.singleValueContainer()
-                    let stringValue = try container.decode(String.self)
-                    switch stringValue {
-                    case CodingKeys.bar.rawValue:
-                        self = .bar
-                    case CodingKeys.baz.rawValue:
-                        self = .baz
-                    default:
-                        throw DecodingError.dataCorruptedError(
-                            in: container,
-                            debugDescription: "Invalid value: \\(stringValue)"
-                        )
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.singleValueContainer()
+                    switch self {
+                    case .bar:
+                        try container.encode(CodingKeys.bar.rawValue)
+                    case .baz:
+                        try container.encode(CodingKeys.baz.rawValue)
                     }
                 }
             }
@@ -237,29 +225,30 @@ final class AutoDecodableMacroTests: XCTestCase {
         )
     }
 
-    // MARK: DecodedValue
+    // MARK: EncodedValue
 
-    func testDecodedValueMacro() {
+    func testEncodedValueMacro() {
         assertMacroExpansion(
             """
             struct Foo {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable
-            extension Foo: Decodable {
+            @AutoEncodable
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
-                    @DecodedValue(Baz.self)
+                    @EncodedValue(Baz.self)
                     case baz
                 }
 
-                private struct Baz: DecodableValue {
+                private struct Baz: EncodableValue {
                     let value1: String
                     let value2: String
 
-                    func value() -> String {
-                        value1 + value2
+                    init(from value: String) {
+                        self.value1 = value.prefix(2)
+                        self.value2 = value.suffix(2)
                     }
                 }
             }
@@ -270,27 +259,26 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case baz
                 }
 
-                private struct Baz: DecodableValue {
+                private struct Baz: EncodableValue {
                     let value1: String
                     let value2: String
 
-                    func value() -> String {
-                        value1 + value2
+                    init(from value: String) {
+                        self.value1 = value.prefix(2)
+                        self.value2 = value.suffix(2)
                     }
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: container.decode(Baz.self, forKey: .baz).value()
-                    )
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(bar, forKey: .bar)
+                    try container.encode(Baz(from: baz), forKey: .baz)
                 }
             }
             """,
@@ -307,8 +295,8 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable
-            extension Foo: Decodable {
+            @AutoEncodable
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case qux
@@ -325,7 +313,7 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case qux
@@ -335,16 +323,14 @@ final class AutoDecodableMacroTests: XCTestCase {
                     }
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    let quxContainer = try container.nestedContainer(
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    var quxContainer = container.nestedContainer(
                         keyedBy: CodingKeys.QuxCodingKeys.self,
                         forKey: .qux
                     )
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: quxContainer.decode(for: .baz)
-                    )
+                    try container.encode(bar, forKey: .bar)
+                    try quxContainer.encode(baz, forKey: .baz)
                 }
             }
             """,
@@ -352,33 +338,34 @@ final class AutoDecodableMacroTests: XCTestCase {
         )
     }
 
-    // MARK: Nested Coding Keys + DecodedValue
+    // MARK: Nested Coding Keys + EncodedValue
 
-    func testDefaultMacroWithNestedCodingKeysUsingDecodedValue() {
+    func testDefaultMacroWithNestedCodingKeysUsingEncodedValue() {
         assertMacroExpansion(
             """
             struct Foo {
                 let bar: Int
                 let baz: String
             }
-            @AutoDecodable
-            extension Foo: Decodable {
+            @AutoEncodable
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case qux
 
                     enum QuxCodingKeys: String, CodingKey {
-                        @DecodedValue(Baz.self)
+                        @EncodedValue(Baz.self)
                         case baz
                     }
                 }
 
-                private struct Baz: DecodableValue {
+                private struct Baz: EncodableValue {
                     let value1: String
                     let value2: String
 
-                    func value() -> String {
-                        value1 + value2
+                    init(from value: String) {
+                        self.value1 = value.prefix(2)
+                        self.value2 = value.suffix(2)
                     }
                 }
             }
@@ -389,7 +376,7 @@ final class AutoDecodableMacroTests: XCTestCase {
                 let bar: Int
                 let baz: String
             }
-            extension Foo: Decodable {
+            extension Foo: Encodable {
                 enum CodingKeys: String, CodingKey {
                     case bar
                     case qux
@@ -399,25 +386,24 @@ final class AutoDecodableMacroTests: XCTestCase {
                     }
                 }
 
-                private struct Baz: DecodableValue {
+                private struct Baz: EncodableValue {
                     let value1: String
                     let value2: String
 
-                    func value() -> String {
-                        value1 + value2
+                    init(from value: String) {
+                        self.value1 = value.prefix(2)
+                        self.value2 = value.suffix(2)
                     }
                 }
 
-                init(from decoder: Decoder) throws {
-                    let container = try decoder.container(keyedBy: CodingKeys.self)
-                    let quxContainer = try container.nestedContainer(
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    var quxContainer = container.nestedContainer(
                         keyedBy: CodingKeys.QuxCodingKeys.self,
                         forKey: .qux
                     )
-                    try self.init(
-                        bar: container.decode(for: .bar),
-                        baz: quxContainer.decode(Baz.self, forKey: .baz).value()
-                    )
+                    try container.encode(bar, forKey: .bar)
+                    try quxContainer.encode(Baz(from: baz), forKey: .baz)
                 }
             }
             """,
