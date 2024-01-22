@@ -5,7 +5,7 @@ extension AttributeSyntax {
         case member(String)
         case function(String?, args: [String])
     }
-    
+
     func args() -> [String: Arg] {
         let args: LabeledExprListSyntax = {
             if case let .argumentList(args) = arguments { args }
@@ -21,9 +21,9 @@ extension AttributeSyntax {
                 $0[key] = .function(
                     function.calledExpression.as(MemberAccessExprSyntax.self)?.declName.baseName.text,
                     args: function.arguments
-                        .compactMap({ $0.expression.as(StringLiteralExprSyntax.self) })
-                        .flatMap({ $0.segments })
-                        .compactMap({ $0.as(StringSegmentSyntax.self) })
+                        .compactMap { $0.expression.as(StringLiteralExprSyntax.self) }
+                        .flatMap { $0.segments }
+                        .compactMap { $0.as(StringSegmentSyntax.self) }
                         .map(\.content.text)
                 )
             }

@@ -3,7 +3,7 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public struct AutoDecodableMacro: MemberMacro {
+public struct AutoEncodableMacro: MemberMacro {
     enum Error: Swift.Error, CustomStringConvertible {
         case onlyApplicableToExtension
         case missingCodingKeys
@@ -11,9 +11,9 @@ public struct AutoDecodableMacro: MemberMacro {
         public var description: String {
             switch self {
             case .onlyApplicableToExtension:
-                "@AutoDecodable can be applied only to extensions."
+                "@AutoEncodable can be applied only to extensions."
             case .missingCodingKeys:
-                "@AutoDecodable requires CodingKey enum provided when keyed or single value for enum container used."
+                "@AutoEncodable requires CodingKey enum provided when keyed or single value for enum container used."
             }
         }
     }
@@ -48,13 +48,14 @@ public struct AutoDecodableMacro: MemberMacro {
             modifiers = []
         }
 
-        let initializerDecl = InitializerDeclSyntax(
+        let funcDecl = FunctionDeclSyntax(
             modifiers: modifiers,
+            name: TokenSyntax(stringLiteral: "encode"),
             signature: FunctionSignatureSyntax(
                 parameterClause: FunctionParameterClauseSyntax(
                     parameters: FunctionParameterListSyntax(
                         arrayLiteral: FunctionParameterSyntax(
-                            stringLiteral: "from decoder: Decoder"
+                            stringLiteral: "to encoder: Encoder"
                         )
                     )
                 ),
@@ -63,7 +64,7 @@ public struct AutoDecodableMacro: MemberMacro {
             body: bodySyntax
         )
 
-        return [.init(initializerDecl)]
+        return [.init(funcDecl)]
     }
 
     // MARK: Keyed Container
@@ -78,80 +79,62 @@ public struct AutoDecodableMacro: MemberMacro {
 
         return try CodeBlockSyntax {
             try VariableDeclSyntax(
-                "let container = try decoder.container(keyedBy: \(raw: mainEnumName).self)"
+                "var container = encoder.container(keyedBy: \(raw: mainEnumName).self)"
             )
             for nestedEnumDecl in nestedEnumsDecl {
                 try VariableDeclSyntax(
                     """
-                    let \(raw: nestedEnumDecl.name)Container = try container.nestedContainer(
+                    var \(raw: nestedEnumDecl.name)Container = container.nestedContainer(
                         keyedBy: \(raw: mainEnumName).\(raw: nestedEnumDecl.decl.name.text).self,
                         forKey: .\(raw: nestedEnumDecl.name)
                     )
                     """
                 )
             }
-            FunctionCallExprSyntax(
-                calledExpression: ExprSyntax("try self.init"),
-                leftParen: .leftParenToken(),
-                arguments: keyedContainerDecodingArgumentsSyntax(
-                    mainEnumCasesDecl: mainEnumCasesDecl,
-                    nestedEnumsDecl: nestedEnumsDecl
-                ),
-                rightParen: .rightParenToken(leadingTrivia: .newline)
-            )
-        }
-    }
-
-    private static func keyedContainerDecodingArgumentsSyntax(
-        mainEnumCasesDecl: NamedDeclArray<EnumCaseDeclSyntax>,
-        nestedEnumsDecl: NamedDeclArray<EnumDeclSyntax>
-    ) -> LabeledExprListSyntax {
-        .init {
             for caseMember in mainEnumCasesDecl {
-                if let decodedValue = caseMember.decl.argValue(forAttributeName: "DecodedValue") {
-                    keyedContainerDecodingArgumentSyntax(
+                if let encodedValue = caseMember.decl.argValue(forAttributeName: "EncodedValue") {
+                    keyedContainerEncodingArgumentSyntax(
                         label: caseMember.name,
-                        decodeType: decodedValue.description
+                        encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text
                     )
                 } else if let nestedEnumDecl = nestedEnumsDecl.first(where: { $0.name == caseMember.name })?.decl {
                     for nestedCaseMember in nestedEnumDecl.casesDecl() {
-                        if let decodedValue = nestedCaseMember.decl.argValue(forAttributeName: "DecodedValue") {
-                            keyedContainerDecodingArgumentSyntax(
+                        if let encodedValue = nestedCaseMember.decl.argValue(forAttributeName: "EncodedValue") {
+                            keyedContainerEncodingArgumentSyntax(
                                 label: nestedCaseMember.name,
                                 containerName: "\(caseMember.name)Container",
-                                decodeType: decodedValue.description
+                                encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text
                             )
                         } else {
-                            keyedContainerDecodingArgumentSyntax(
+                            keyedContainerEncodingArgumentSyntax(
                                 label: nestedCaseMember.name,
                                 containerName: "\(caseMember.name)Container"
                             )
                         }
                     }
                 } else {
-                    keyedContainerDecodingArgumentSyntax(label: caseMember.name)
+                    keyedContainerEncodingArgumentSyntax(label: caseMember.name)
                 }
             }
         }
     }
 
-    private static func keyedContainerDecodingArgumentSyntax(
+    private static func keyedContainerEncodingArgumentSyntax(
         label: String,
         containerName: String = "container",
-        decodeType: String? = nil
-    ) -> LabeledExprSyntax {
-        .init(
-            leadingTrivia: .newline,
-            label: "\(raw: label)",
-            colon: .colonToken(),
-            expression: {
-                if let decodeType = $0 {
-                    ExprSyntax("\(raw: containerName).decode(\(raw: decodeType), forKey: .\(raw: label)).value()")
-                } else {
-                    ExprSyntax("\(raw: containerName).decode(for: .\(raw: label))")
-                }
-            }(decodeType)
-        )
+        encodeType: String? = nil
+    ) -> FunctionCallExprSyntax {
+        .init(callee: ExprSyntax("try \(raw: containerName).encode")) {
+            LabeledExprListSyntax {
+                LabeledExprSyntax(
+                    expression: ExprSyntax(stringLiteral: encodeType.map { "\($0)(from: \(label))" } ?? label)
+                )
+                LabeledExprSyntax(
+                    label: "forKey",
+                    expression: ExprSyntax(stringLiteral: ".\(label)")
+                )
+            }
+        }
     }
 
     // MARK: Single Value Container
@@ -159,12 +142,9 @@ public struct AutoDecodableMacro: MemberMacro {
     private static func singleValueContainerBodySyntax(label: String) throws -> CodeBlockSyntax {
         try CodeBlockSyntax(
             statementsBuilder: {
-                try VariableDeclSyntax("let container = try decoder.singleValueContainer()")
-                FunctionCallExprSyntax(callee: ExprSyntax("try self.init")) {
-                    LabeledExprSyntax(
-                        label: label,
-                        expression: ExprSyntax("container.decode()")
-                    )
+                try VariableDeclSyntax("var container = encoder.singleValueContainer()")
+                FunctionCallExprSyntax(callee: ExprSyntax("try container.encode")) {
+                    LabeledExprSyntax(expression: ExprSyntax(stringLiteral: label))
                 }
             }
         )
@@ -182,57 +162,37 @@ public struct AutoDecodableMacro: MemberMacro {
         let mainEnumCasesDecl = mainEnumDecl.casesDecl()
         return try CodeBlockSyntax(
             statementsBuilder: {
-                try VariableDeclSyntax("let container = try decoder.singleValueContainer()")
-                try VariableDeclSyntax("let stringValue = try container.decode(String.self)")
+                try VariableDeclSyntax("var container = encoder.singleValueContainer()")
                 SwitchExprSyntax(
-                    subject: ExprSyntax("stringValue"),
+                    subject: ExprSyntax("self"),
                     cases: SwitchCaseListSyntax {
                         for caseMember in mainEnumCasesDecl {
                             singleValueContainerCaseSyntax(
-                                label: "\(mainEnumName).\(caseMember.name).rawValue",
-                                caseName: caseMember.name
+                                label: caseMember.name,
+                                codingKeyName: "\(mainEnumName).\(caseMember.name).rawValue"
                             )
                         }
-                        singleValueContainerDefaultCaseSyntax()
                     }
                 )
             }
         )
     }
 
-    private static func singleValueContainerCaseSyntax(label: String, caseName: String) -> SwitchCaseSyntax {
+    private static func singleValueContainerCaseSyntax(label: String, codingKeyName: String) -> SwitchCaseSyntax {
         .init(
             label: .case(
                 .init(
                     caseItems: .init(
                         itemsBuilder: {
                             SwitchCaseItemSyntax(
-                                pattern: PatternSyntax(stringLiteral: label)
+                                pattern: PatternSyntax(stringLiteral: ".\(label)")
                             )
                         }
                     )
                 )
             ),
             statements: CodeBlockItemListSyntax {
-                ExprSyntax("self = .\(raw: caseName)")
-            }
-        )
-    }
-
-    private static func singleValueContainerDefaultCaseSyntax() -> SwitchCaseSyntax {
-        .init(
-            label: .default(.init()),
-            statements: CodeBlockItemListSyntax {
-                ThrowStmtSyntax(
-                    expression: ExprSyntax(
-                        """
-                        DecodingError.dataCorruptedError(
-                            in: container,
-                            debugDescription: "Invalid value: \\(stringValue)"
-                        )
-                        """
-                    )
-                )
+                ExprSyntax("try container.encode(\(raw: codingKeyName))")
             }
         )
     }

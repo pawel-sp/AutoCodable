@@ -59,7 +59,7 @@ final class AutoDecodabloTests: XCTestCase {
 
 // MARK: SUT
 
-struct User: Equatable {
+private struct User: Equatable {
     let identifier: Identifier
     let firstName: String
     let lastName: String
@@ -71,16 +71,16 @@ struct User: Equatable {
     let membership: Membership
 }
 
-struct Identifier: Equatable {
+private struct Identifier: Equatable {
     let value: Int
 }
 
-struct Address: Equatable {
+private struct Address: Equatable {
     let line1: String
     let line2: String
 }
 
-enum Membership: Equatable {
+private enum Membership: Equatable {
     case premium
     case gold
 }
