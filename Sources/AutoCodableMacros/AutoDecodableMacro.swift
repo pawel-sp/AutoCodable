@@ -203,20 +203,19 @@ public struct AutoDecodableMacro: MemberMacro {
     private static func singleValueContainerCaseSyntax(label: String, caseName: String) -> SwitchCaseSyntax {
         .init(
             label: .case(
-                .init(
-                    caseItems: .init(
-                        itemsBuilder: {
-                            SwitchCaseItemSyntax(
-                                pattern: PatternSyntax(stringLiteral: label)
+                SwitchCaseLabelSyntax(
+                    caseItems: .init {
+                        SwitchCaseItemSyntax(
+                            pattern: ExpressionPatternSyntax(
+                                expression: ExprSyntax(stringLiteral: label)
                             )
-                        }
-                    )
+                        )
+                    }
                 )
-            ),
-            statements: CodeBlockItemListSyntax {
-                ExprSyntax("self = .\(raw: caseName)")
-            }
-        )
+            )
+        ) {
+            ExprSyntax("self = .\(raw: caseName)")
+        }
     }
 
     private static func singleValueContainerDefaultCaseSyntax() -> SwitchCaseSyntax {
