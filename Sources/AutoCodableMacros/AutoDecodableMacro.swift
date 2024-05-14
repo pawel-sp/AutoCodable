@@ -108,28 +108,36 @@ public struct AutoDecodableMacro: MemberMacro {
     ) -> LabeledExprListSyntax {
         .init {
             for caseMember in mainEnumCasesDecl {
+                let conditional = caseMember.decl.hasAttribute(containingString: "Conditional")
                 if let decodedValue = caseMember.decl.argValue(forAttributeName: "DecodedValue") {
                     keyedContainerDecodingArgumentSyntax(
                         label: caseMember.name,
-                        decodeType: decodedValue.description
+                        decodeType: decodedValue.description,
+                        conditional: conditional
                     )
                 } else if let nestedEnumDecl = nestedEnumsDecl.first(where: { $0.name == caseMember.name })?.decl {
                     for nestedCaseMember in nestedEnumDecl.casesDecl() {
+                        let conditional = nestedCaseMember.decl.hasAttribute(containingString: "Conditional")
                         if let decodedValue = nestedCaseMember.decl.argValue(forAttributeName: "DecodedValue") {
                             keyedContainerDecodingArgumentSyntax(
                                 label: nestedCaseMember.name,
                                 containerName: "\(caseMember.name)Container",
-                                decodeType: decodedValue.description
+                                decodeType: decodedValue.description,
+                                conditional: conditional
                             )
                         } else {
                             keyedContainerDecodingArgumentSyntax(
                                 label: nestedCaseMember.name,
-                                containerName: "\(caseMember.name)Container"
+                                containerName: "\(caseMember.name)Container",
+                                conditional: conditional
                             )
                         }
                     }
                 } else {
-                    keyedContainerDecodingArgumentSyntax(label: caseMember.name)
+                    keyedContainerDecodingArgumentSyntax(
+                        label: caseMember.name,
+                        conditional: conditional
+                    )
                 }
             }
         }
@@ -138,17 +146,19 @@ public struct AutoDecodableMacro: MemberMacro {
     private static func keyedContainerDecodingArgumentSyntax(
         label: String,
         containerName: String = "container",
-        decodeType: String? = nil
+        decodeType: String? = nil,
+        conditional: Bool
     ) -> LabeledExprSyntax {
-        .init(
+        let (condition, suffix) = conditional ? ("IfPresent", "?") : ("", "")
+        return .init(
             leadingTrivia: .newline,
             label: "\(raw: label)",
             colon: .colonToken(),
             expression: {
                 if let decodeType = $0 {
-                    ExprSyntax("\(raw: containerName).decode(\(raw: decodeType), forKey: .\(raw: label)).value()")
+                    ExprSyntax("\(raw: containerName).decode\(raw: condition)(\(raw: decodeType), forKey: .\(raw: label))\(raw: suffix).value()")
                 } else {
-                    ExprSyntax("\(raw: containerName).decode(for: .\(raw: label))")
+                    ExprSyntax("\(raw: containerName).decode\(raw: condition)(for: .\(raw: label))")
                 }
             }(decodeType)
         )

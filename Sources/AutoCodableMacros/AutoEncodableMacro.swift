@@ -92,28 +92,36 @@ public struct AutoEncodableMacro: MemberMacro {
                 )
             }
             for caseMember in mainEnumCasesDecl {
+                let conditional = caseMember.decl.hasAttribute(containingString: "Conditional")
                 if let encodedValue = caseMember.decl.argValue(forAttributeName: "EncodedValue") {
                     keyedContainerEncodingArgumentSyntax(
                         label: caseMember.name,
-                        encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text
+                        encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text,
+                        conditional: conditional
                     )
                 } else if let nestedEnumDecl = nestedEnumsDecl.first(where: { $0.name == caseMember.name })?.decl {
                     for nestedCaseMember in nestedEnumDecl.casesDecl() {
+                        let conditional = nestedCaseMember.decl.hasAttribute(containingString: "Conditional")
                         if let encodedValue = nestedCaseMember.decl.argValue(forAttributeName: "EncodedValue") {
                             keyedContainerEncodingArgumentSyntax(
                                 label: nestedCaseMember.name,
                                 containerName: "\(caseMember.name)Container",
-                                encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text
+                                encodeType: encodedValue.base?.as(DeclReferenceExprSyntax.self)?.baseName.text,
+                                conditional: conditional
                             )
                         } else {
                             keyedContainerEncodingArgumentSyntax(
                                 label: nestedCaseMember.name,
-                                containerName: "\(caseMember.name)Container"
+                                containerName: "\(caseMember.name)Container",
+                                conditional: conditional
                             )
                         }
                     }
                 } else {
-                    keyedContainerEncodingArgumentSyntax(label: caseMember.name)
+                    keyedContainerEncodingArgumentSyntax(
+                        label: caseMember.name,
+                        conditional: conditional
+                    )
                 }
             }
         }
@@ -122,9 +130,11 @@ public struct AutoEncodableMacro: MemberMacro {
     private static func keyedContainerEncodingArgumentSyntax(
         label: String,
         containerName: String = "container",
-        encodeType: String? = nil
+        encodeType: String? = nil,
+        conditional: Bool
     ) -> FunctionCallExprSyntax {
-        .init(callee: ExprSyntax("try \(raw: containerName).encode")) {
+        let condition = conditional ? "IfPresent" : .init()
+        return .init(callee: ExprSyntax("try \(raw: containerName).encode\(raw: condition)")) {
             LabeledExprListSyntax {
                 LabeledExprSyntax(
                     expression: ExprSyntax(stringLiteral: encodeType.map { "\($0)(from: \(label))" } ?? label)
