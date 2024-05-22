@@ -36,8 +36,8 @@ final class AutoDecodabloTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
 
         let user = try decoder.decode(User.self, from: jsonData)
-
-        XCTAssertEqual(
+        
+        try XCTAssertEqual(
             user,
             .init(
                 identifier: .init(value: 123),
@@ -48,7 +48,11 @@ final class AutoDecodabloTests: XCTestCase {
                     line2: "City name"
                 ),
                 avatarUrl: .init(string: "http://images.com/avatar.jpg")!,
-                age: 22,
+                age: XCTUnwrap(
+                    ISO8601DateFormatter()
+                        .date(from: "2001-02-15T18:32:53+0000")
+                        .map { Calendar.current.dateComponents([.year], from: $0, to: .now).year ?? 0 }
+                ),
                 email: "me@mail.com",
                 phoneNumber: "+00 123 456 789",
                 membership: .gold
