@@ -12,7 +12,9 @@ final class AutoEncodableTests: XCTestCase {
                 line2: "City name"
             ),
             avatarUrl: .init(string: "http://images.com/avatar.jpg")!,
-            age: 22,
+            age: ISO8601DateFormatter()
+                .date(from: "2001-12-31T23:00:00Z")
+                .map { Calendar.current.dateComponents([.year], from: $0, to: .now).year ?? 0 } ?? 0,
             email: "me@mail.com",
             phoneNumber: "+00 123 456 789",
             membership: .gold
