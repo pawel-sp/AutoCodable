@@ -58,7 +58,9 @@ public struct AutoDecodableMacro: MemberMacro {
                         )
                     )
                 ),
-                effectSpecifiers: FunctionEffectSpecifiersSyntax(throwsSpecifier: TokenSyntax.keyword(.throws))
+                effectSpecifiers: FunctionEffectSpecifiersSyntax(
+                    throwsClause: ThrowsClauseSyntax(throwsSpecifier: TokenSyntax.keyword(.throws))
+                )
             ),
             body: bodySyntax
         )
