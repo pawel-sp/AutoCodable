@@ -8,5 +8,6 @@ struct AutoCodablePlugin: CompilerPlugin {
         DecodedValueMacro.self,
         AutoEncodableMacro.self,
         EncodedValueMacro.self,
+        ConditionalMacro.self
     ]
 }
