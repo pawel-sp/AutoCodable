@@ -185,6 +185,45 @@ extension User: Encodable {
 </details>
 
 <details>
+<summary>@AutoEncodable + ifPresent</summary>
+
+```swift
+// User.swift
+struct User {
+    let firstName: String
+    let lastName: String?
+}
+
+// User+Encodable.swift
+@AutoEncodable
+extension User: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        @Conditional
+        case lastName
+    }
+}
+
+🔽
+
+// User+Encodable.swift
+extension User: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        case lastName
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(firstName, forKey: .firstName)
+        try container.encodeIfPresent(lastName, forKey: .lastName)
+    }
+}
+```
+
+</details>
+
+<details>
 <summary>@AutoEncodable + enum</summary>
 
 ```swift
@@ -440,6 +479,46 @@ extension User: Decodable {
         try self.init(
             firstName: namesContainer.decode(for: .firstName),
             lastName: namesContainer.decode(for: .lastName)
+        )
+    }
+}
+```
+</details>
+
+<details>
+<summary>@AutoDecodable + ifPresent</summary>
+
+```swift
+// User.swift
+struct User {
+    let firstName: String
+    let lastName: String?
+}
+
+// User+Decodable.swift
+@AutoDecodable
+extension User: Decodable {
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        @Conditional
+        case lastName
+    }
+}
+
+🔽
+
+// User+Decodable.swift
+extension User: Decodable {
+    enum CodingKeys: String, CodingKey {
+        case firstName
+        case lastName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            firstName: container.decode(for: .firstName),
+            lastName: container.decodeIfPresent(for: .lastName)
         )
     }
 }
