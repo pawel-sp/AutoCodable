@@ -6,6 +6,7 @@ final class AutoEncodableTests: XCTestCase {
         let user = User(
             identifier: .init(value: 123),
             firstName: "John",
+            middleName: nil,
             lastName: "Doe",
             address: .init(
                 line1: "Street name",
@@ -65,6 +66,7 @@ final class AutoEncodableTests: XCTestCase {
 private struct User: Equatable {
     let identifier: Identifier
     let firstName: String
+    let middleName: String?
     let lastName: String
     let address: Address
     let avatarUrl: URL?
@@ -103,6 +105,8 @@ extension User: Encodable {
 
         enum NamesCodingKeys: String, CodingKey {
             case firstName = "first_name"
+            @Conditional
+            case middleName = "middle_name"
             case lastName = "last_name"
         }
 

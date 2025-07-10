@@ -42,6 +42,7 @@ final class AutoDecodabloTests: XCTestCase {
             .init(
                 identifier: .init(value: 123),
                 firstName: "John",
+                middleName: nil,
                 lastName: "Doe",
                 address: .init(
                     line1: "Street name",
@@ -66,6 +67,7 @@ final class AutoDecodabloTests: XCTestCase {
 private struct User: Equatable {
     let identifier: Identifier
     let firstName: String
+    let middleName: String?
     let lastName: String
     let address: Address
     let avatarUrl: URL?
@@ -104,6 +106,8 @@ extension User: Decodable {
 
         enum NamesCodingKeys: String, CodingKey {
             case firstName = "first_name"
+            @Conditional
+            case middleName = "middle_name"
             case lastName = "last_name"
         }
 
