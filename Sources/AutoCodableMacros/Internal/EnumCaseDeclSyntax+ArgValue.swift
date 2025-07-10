@@ -1,6 +1,12 @@
 import SwiftSyntax
 
 extension EnumCaseDeclSyntax {
+    func hasAttribute(containingString string: String) -> Bool {
+        attributes
+            .compactMap({ $0.as(AttributeSyntax.self) })
+            .contains(where: { $0.attributeName.description.contains(string) })
+    }
+
     func argValue(forAttributeName attributeName: String) -> MemberAccessExprSyntax? {
         guard
             let attribute = attributes

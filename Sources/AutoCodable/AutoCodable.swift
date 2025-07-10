@@ -40,3 +40,6 @@ public macro DecodedValue<T: DecodableValue>(
 public macro EncodedValue<T: EncodableValue>(
     _ type: T.Type
 ) = #externalMacro(module: "AutoCodableMacros", type: "EncodedValueMacro")
+
+@attached(peer)
+public macro Conditional() = #externalMacro(module: "AutoCodableMacros", type: "ConditionalMacro")
