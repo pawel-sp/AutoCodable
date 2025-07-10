@@ -6,6 +6,7 @@ import XCTest
 private let testMacros: [String: Macro.Type] = [
     "AutoEncodable": AutoEncodableMacro.self,
     "EncodedValue": EncodedValueMacro.self,
+    "Conditional": ConditionalMacro.self
 ]
 
 final class AutoEncodableMacroTests: XCTestCase {
@@ -218,6 +219,47 @@ final class AutoEncodableMacroTests: XCTestCase {
                     case .baz:
                         try container.encode(CodingKeys.baz.rawValue)
                     }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    // MARK: Conditional
+
+    func testConditionalMacro() {
+        assertMacroExpansion(
+            """
+            struct Foo {
+                let bar: Int
+                let baz: String?
+            }
+            @AutoEncodable
+            extension Foo: Encodable {
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                    @Conditional
+                    case baz
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct Foo {
+                let bar: Int
+                let baz: String?
+            }
+            extension Foo: Encodable {
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                    case baz
+                }
+
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(bar, forKey: .bar)
+                    try container.encodeIfPresent(baz, forKey: .baz)
                 }
             }
             """,

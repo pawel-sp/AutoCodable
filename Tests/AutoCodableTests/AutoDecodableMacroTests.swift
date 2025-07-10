@@ -6,6 +6,7 @@ import XCTest
 private let testMacros: [String: Macro.Type] = [
     "AutoDecodable": AutoDecodableMacro.self,
     "DecodedValue": DecodedValueMacro.self,
+    "Conditional": ConditionalMacro.self
 ]
 
 final class AutoDecodableMacroTests: XCTestCase {
@@ -230,6 +231,49 @@ final class AutoDecodableMacroTests: XCTestCase {
                             debugDescription: "Invalid value: \\(stringValue)"
                         )
                     }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    // MARK: Conditional
+
+    func testConditionalMacro() {
+        assertMacroExpansion(
+            """
+            struct Foo {
+                let bar: Int
+                let baz: String?
+            }
+            @AutoDecodable
+            extension Foo: Decodable {
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                    @Conditional
+                    case baz
+                }
+            }
+            """,
+            expandedSource:
+            """
+            struct Foo {
+                let bar: Int
+                let baz: String?
+            }
+            extension Foo: Decodable {
+                enum CodingKeys: String, CodingKey {
+                    case bar
+                    case baz
+                }
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    try self.init(
+                        bar: container.decode(for: .bar),
+                        baz: container.decodeIfPresent(for: .baz)
+                    )
                 }
             }
             """,
